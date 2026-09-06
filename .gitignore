@@ -1,0 +1,47 @@
+# ── Virtual environment ──
+venv/
+env/
+.venv/
+
+# ── Python cache/build artifacts ──
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+build/
+dist/
+
+# ── Model weights & checkpoints (large files — don't commit) ──
+deberta_claim_classifier_fp32_v2/
+deberta_ai_detector_fp32_v1/
+*.bin
+*.safetensors
+*.pt
+*.pth
+*checkpoint*/
+
+# ── Datasets (often large, or shouldn't be public) ──
+*.csv
+ifnd_data/
+fused_*.csv
+news_domain_pairs*.csv
+ai_news_checkpoint.csv
+
+# ── Hugging Face / model cache ──
+.cache/
+huggingface/
+
+# ── Secrets / API keys ──
+.env
+*.env
+config_secrets.py
+**/api_keys.py
+
+# ── Jupyter/Colab ──
+.ipynb_checkpoints/
+
+# ── OS/editor junk ──
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

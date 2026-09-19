@@ -46,6 +46,7 @@ from typing import Any, Dict, List, Optional
 from claim_pipeline import extract_and_score_claims
 from evidence_retrieval import get_evidence_for_claims
 from verdict_scoring import assign_risk_tier, score_claims
+from article_metrics import compute_article_metrics
 
 
 def analyze_article(
@@ -90,6 +91,13 @@ def analyze_article(
     pipeline_start = time.perf_counter()
 
     # ─────────────────────────────────────────────────────────────
+    # ARTICLE-LEVEL METRICS: Readability & Coherence
+    # ─────────────────────────────────────────────────────────────
+    # Evaluates holistic stylistic and structural flow across the full text.
+    print("\n[Article Metrics] Computing readability and semantic coherence...")
+    article_metrics = compute_article_metrics(article_text)
+
+    # ─────────────────────────────────────────────────────────────
     # STAGE 1: Sentence segmentation, check-worthiness & AI detection
     # ─────────────────────────────────────────────────────────────
     # Why time this stage:
@@ -121,6 +129,7 @@ def analyze_article(
             "overall_risk_score": 0.0,
             "overall_risk_tier": assign_risk_tier(0.0),
             "highest_risk_claim": None,
+            "article_metrics": article_metrics,
         }
 
     # ─────────────────────────────────────────────────────────────
@@ -177,6 +186,7 @@ def analyze_article(
         "overall_risk_score": overall_risk_score,
         "overall_risk_tier": overall_risk_tier,
         "highest_risk_claim": highest_risk_claim,
+        "article_metrics": article_metrics,
     }
 
 

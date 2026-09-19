@@ -61,7 +61,7 @@ _TAVILY_API_KEY: Optional[str] = os.environ.get("TAVILY_API_KEY")
 _tavily_client: Optional[TavilyClient] = None
 if _TAVILY_API_KEY:
     _tavily_client = TavilyClient(api_key=_TAVILY_API_KEY)
-    print("[evidence_retrieval] Tavily client initialised ✓")
+    print("[evidence_retrieval] Tavily client initialised [OK]")
 else:
     warnings.warn(
         "TAVILY_API_KEY not found in environment variables. "
@@ -81,9 +81,9 @@ else:
 # the init cost exactly once, even if the module
 # is called thousands of times in a batch run.
 # ──────────────────────────────────────────────
-print("[evidence_retrieval] Loading sentence-transformer model …")
+print("[evidence_retrieval] Loading sentence-transformer model ...")
 _st_model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
-print("[evidence_retrieval] Sentence-transformer ready ✓")
+print("[evidence_retrieval] Sentence-transformer ready [OK]")
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

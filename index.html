@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VerifactAI — Test Interface</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 0 20px;
+      color: #222;
+      line-height: 1.5;
+    }
+    h1 { margin-bottom: 5px; }
+    p.subtitle { color: #555; margin-top: 0; margin-bottom: 20px; }
+    textarea {
+      width: 100%;
+      height: 160px;
+      box-sizing: border-box;
+      padding: 10px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-family: inherit;
+    }
+    .controls {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    button {
+      padding: 10px 22px;
+      font-size: 15px;
+      font-weight: 600;
+      background-color: #0066cc;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover { background-color: #0052a3; }
+    button:disabled { background-color: #999; cursor: not-allowed; }
+    .loading {
+      margin-top: 20px;
+      padding: 12px;
+      background: #f0f4f8;
+      border-left: 4px solid #0066cc;
+      font-weight: 500;
+    }
+    .error-box {
+      margin-top: 20px;
+      padding: 12px;
+      background: #ffebe6;
+      border-left: 4px solid #cc0000;
+      color: #990000;
+    }
+    .summary-card {
+      margin-top: 25px;
+      padding: 15px;
+      background: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .summary-card h2 { margin-top: 0; }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .metric-item {
+      background: #fff;
+      padding: 10px;
+      border: 1px solid #eee;
+      border-radius: 4px;
+    }
+    .metric-label { font-size: 12px; color: #666; text-transform: uppercase; }
+    .metric-value { font-size: 18px; font-weight: bold; margin-top: 4px; }
+    .tier-Low { color: #008800; }
+    .tier-Medium { color: #d97706; }
+    .tier-High { color: #cc0000; }
+    .claims-section { margin-top: 30px; }
+    .claim-card {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 14px;
+      margin-bottom: 14px;
+      background: #fff;
+    }
+    .claim-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .claim-text {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .claim-meta {
+      font-size: 13px;
+      color: #555;
+      margin-bottom: 6px;
+    }
+    .claim-justification {
+      font-size: 14px;
+      background: #f8f9fa;
+      padding: 8px 10px;
+      border-left: 3px solid #ccc;
+      margin-top: 8px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .badge-supported { background: #e6f4ea; color: #137333; }
+    .badge-contradicted { background: #fce8e6; color: #c5221f; }
+    .badge-insufficient_evidence { background: #fef7e0; color: #b06000; }
+  </style>
+</head>
+<body>
+
+  <h1>VerifactAI</h1>
+  <p class="subtitle">Misinformation Detection & Live Verification Pipeline Testbed</p>
+
+  <form id="analyze-form">
+    <label for="article_text"><strong>Article / Paragraph Text:</strong></label><br>
+    <textarea id="article_text" placeholder="Paste an article or paragraph here to analyze..."></textarea>
+
+    <div class="controls">
+      <button type="submit" id="submit-btn">Analyze</button>
+      <label style="font-size: 14px; color: #444;">
+        Claim threshold:
+        <input type="number" id="claim_threshold" value="0.65" step="0.05" min="0" max="1" style="width: 60px;">
+      </label>
+    </div>
+  </form>
+
+  <div id="loading" class="loading" style="display: none;">
+    ⏳ Running analysis across DeBERTa, RoBERTa, Tavily search, and Groq NLI (may take 15–30s)...
+  </div>
+
+  <div id="error" class="error-box" style="display: none;"></div>
+
+  <div id="results" style="display: none;">
+    <div class="summary-card">
+      <h2>Article Verification Summary</h2>
+      <div class="metrics-grid">
+        <div class="metric-item">
+          <div class="metric-label">Overall Risk Score</div>
+          <div class="metric-value" id="overall-risk-score">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Risk Tier</div>
+          <div class="metric-value" id="overall-risk-tier">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Check-Worthy Claims</div>
+          <div class="metric-value" id="num-claims">0</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Article Length</div>
+          <div class="metric-value" id="article-length">0 chars</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Readability (FK Grade)</div>
+          <div class="metric-value" id="readability-fk">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Avg Coherence</div>
+          <div class="metric-value" id="coherence-score">--</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="claims-section">
+      <h3>Extracted Claims &amp; Verifications</h3>
+      <div id="claims-container"></div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("analyze-form");
+    const textInput = document.getElementById("article_text");
+    const thresholdInput = document.getElementById("claim_threshold");
+    const submitBtn = document.getElementById("submit-btn");
+    const loadingDiv = document.getElementById("loading");
+    const errorDiv = document.getElementById("error");
+    const resultsDiv = document.getElementById("results");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = textInput.value.trim();
+      if (!text) {
+        alert("Please paste or type some text first.");
+        return;
+      }
+
+      // Reset state
+      errorDiv.style.display = "none";
+      resultsDiv.style.display = "none";
+      loadingDiv.style.display = "block";
+      submitBtn.disabled = true;
+
+      try {
+        // If served from FastAPI, relative '/analyze' works automatically.
+        // If opened as a local file, falls back to http://127.0.0.1:8000/analyze
+        const endpoint = window.location.origin.startsWith("http")
+          ? "/analyze"
+          : "http://127.0.0.1:8000/analyze";
+
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            article_text: text,
+            claim_threshold: parseFloat(thresholdInput.value) || 0.65
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || `Server error: ${response.status}`);
+        }
+
+        renderResults(data);
+      } catch (err) {
+        errorDiv.textContent = `Error: ${err.message}`;
+        errorDiv.style.display = "block";
+      } finally {
+        loadingDiv.style.display = "none";
+        submitBtn.disabled = false;
+      }
+    });
+
+    function renderResults(data) {
+      document.getElementById("overall-risk-score").textContent = `${data.overall_risk_score} / 100`;
+
+      const tierEl = document.getElementById("overall-risk-tier");
+      tierEl.textContent = data.overall_risk_tier;
+      tierEl.className = `metric-value tier-${data.overall_risk_tier}`;
+
+      document.getElementById("num-claims").textContent = data.num_claims_found;
+      document.getElementById("article-length").textContent = `${data.article_length} chars`;
+
+      // Readability & coherence
+      const metrics = data.article_metrics || {};
+      const fk = metrics.readability?.flesch_kincaid_grade;
+      document.getElementById("readability-fk").textContent = fk != null ? `Grade ${fk}` : "N/A";
+
+      const coh = metrics.coherence?.avg_coherence;
+      document.getElementById("coherence-score").textContent = coh != null ? coh.toFixed(3) : "N/A";
+
+      // Render claims
+      const container = document.getElementById("claims-container");
+      container.innerHTML = "";
+
+      if (!data.claims || data.claims.length === 0) {
+        container.innerHTML = "<p><em>No check-worthy factual claims detected in the text.</em></p>";
+      } else {
+        data.claims.forEach((claim, idx) => {
+          const card = document.createElement("div");
+          card.className = "claim-card";
+
+          const verdict = claim.verdict || "insufficient_evidence";
+          const badgeClass = `badge badge-${verdict}`;
+
+          card.innerHTML = `
+            <div class="claim-header">
+              <span><strong>Claim #${idx + 1}</strong></span>
+              <span class="${badgeClass}">${verdict.toUpperCase()}</span>
+            </div>
+            <div class="claim-text">"${escapeHtml(claim.text)}"</div>
+            <div class="claim-meta">
+              <strong>Risk Score:</strong> ${claim.risk_score} (<span class="tier-${claim.risk_tier}">${claim.risk_tier}</span>) &bull;
+              <strong>P(Claim):</strong> ${(claim.p_claim * 100).toFixed(1)}% &bull;
+              <strong>P(AI):</strong> ${(claim.p_ai_generated * 100).toFixed(1)}% &bull;
+              <strong>Contradiction Score:</strong> ${claim.contradiction_score}
+            </div>
+            <div class="claim-justification">
+              <strong>Justification:</strong> ${escapeHtml(claim.justification || "No justification provided.")}
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      }
+
+      resultsDiv.style.display = "block";
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return str.replace(/[&<>"']/g, (m) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      })[m]);
+    }
+  </script>
+</body>
+</html>

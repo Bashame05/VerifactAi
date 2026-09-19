@@ -63,7 +63,7 @@ _GROQ_API_KEY: Optional[str] = os.environ.get("GROQ_API_KEY")
 _groq_client: Optional[Groq] = None
 if _GROQ_API_KEY:
     _groq_client = Groq(api_key=_GROQ_API_KEY)
-    print("[verdict_scoring] Groq client initialised ✓")
+    print("[verdict_scoring] Groq client initialised [OK]")
 else:
     warnings.warn(
         "GROQ_API_KEY not found in environment variables. "

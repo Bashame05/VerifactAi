@@ -1,0 +1,242 @@
+[
+  {
+    "claim": "Trollhunters was produced by an animation company.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Liverpool is in Europe.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Barry Van Dyke is an actor and the son of an actor.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "The horse was domesticated on a broad scale by 3103 BC.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Arizona is not a state.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "2012 was the year when the series finale of Make it or Break It ended.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Rob Sheridan is a Canadian graphic designer.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Tilda Swinton is only Scottish.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Nuuk is a seat of government.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Soyuz was part of a space program.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Neil Diamond is not a musician.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Tim McGraw acted in a movie.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Asylum Records is an American record label founded in 1979 by Emma Stone.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Entourage (film) is a film that grossed over $49 million dollars.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Henry II of France is not a father.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "100 percent of the University of Mississippi students are minorities.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Sidse Babett Knudsen works in radio.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Ingushetia was established in the U.S South Peninsula.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Danielle Cormack is an actress.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Birthday Song (2 Chainz song) was produced by American rapper Kanye West.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Fabian Nicieza has yet to work on a comic book.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Australia (2008 film) production took place in Bowen.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Camden, New Jersey is the home of a school that was founded as the South Jersey Law School in 1926.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Entourage (film) was released in a specific year.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Michelin Guides are published by a German company.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Baz Luhrmann's film Australia is solely an epic historical romantic comedy.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Bret Easton Ellis wrote the screenplay for The Canyons.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Heavy Metal music was developed in the early 1970's.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "There are not rumors that Augustus' wife, Livia, poisoned him.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Julianne Moore was not in the television series As the World Turns.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Winter's Tale is by an American.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Ann Richards was professionally involved in politics.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Vedam was written and directed by Christopher Nolan.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "The highest point of the Hindu Kush is Everest.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Shane McMahon officially retired on the first day of 2010.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Seohyun was born on April 28, 1991.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "John Dolmayan is Armenian-American and Indian.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Kuching is the capital of Sarawak.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "San Diego Comic-Con was not founded as the Golden State Comic Book Convention.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Lost lasted from October 14, 1985 to December 13, 1999.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Due Date was shot in space.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "The State of Palestine claims the West Bank.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Saxony is the tenth smallest German state.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Martin Van Buren only served as senator.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Augustus died in 140 AD.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Seohyun is a performer.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Aleister Crowley was an English citizen.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Hush (2016 film) was written by Intrepid Pictures.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "2015 was the year when the principal photography of The Disaster Aritst (film) started.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "The French Resistance planned acts of sabotage on telecommunication networks.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Stripes was the first significant television role for at least one actor.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "The New York Knicks compete in the Eastern Conference of the National Basketball Association.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Muscarinic acetylcholine receptors are recognized as mAChRs.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Tool has been awarded three Grammy Awards.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Duff McKagan writes sometimes.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Despicable Me 2 was directed by a lake.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Topman has clothing outlets in six Irish cities and towns.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "Intelligence officers refused to meet with Omar Khadr.",
+    "fever_label": "REFUTES"
+  },
+  {
+    "claim": "Noah Cyrus is a younger sister of Miley Cyrus.",
+    "fever_label": "SUPPORTS"
+  },
+  {
+    "claim": "The Endless River, which was released in 2014 is Pink Floyd's final studio album.",
+    "fever_label": "SUPPORTS"
+  }
+]

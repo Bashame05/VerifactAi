@@ -32,17 +32,25 @@ from __future__ import annotations
 import json
 import os
 import random
+import sys
 import time
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
 
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 import numpy as np
+
 # ─────────────────────────────────────────────────────────────
 # File Paths & Constants
 # ─────────────────────────────────────────────────────────────
 FEVER_DEV_URL = "https://fever.ai/download/fever/shared_task_dev.jsonl"
 FEVER_EVAL_SET_PATH = "fever_eval_set.json"
-EVAL_RESULTS_PATH = "eval_raw_results.json"
+EVAL_RESULTS_PATH = "eval_raw_results_2.json"
 NUM_SAMPLES_PER_CLASS = 30  # 30 SUPPORTS + 30 REFUTES = 60 balanced claims
 RANDOM_SEED = 42
 
@@ -160,7 +168,8 @@ def run_pipeline_evaluation(
 
     # Import pipeline stages lazily
     from claim_pipeline import get_claim_probabilities, get_ai_probabilities
-    from evidence_retrieval import get_evidence_for_claim
+    from decontext import decontextualize_claims
+    from evidence_retrieval import get_evidence_for_claims
     from verdict_scoring import score_claim
 
     for idx, item in enumerate(eval_set, 1):
@@ -177,21 +186,27 @@ def run_pipeline_evaluation(
         p_claim = get_claim_probabilities([claim_text])[0]
         p_ai = get_ai_probabilities([claim_text])[0]
 
-        # 2. Live Web Evidence Retrieval
-        evidence = get_evidence_for_claim(claim_text, max_results=6, top_k=3)
-        print(f"     Retrieved {len(evidence)} evidence snippet(s)")
-
-        # 3. NLI + Composite Risk Scoring
         claim_dict = {
             "text": claim_text,
             "p_claim": round(p_claim, 4),
             "p_ai_generated": round(p_ai, 4),
-            "evidence": evidence,
         }
-        scored = score_claim(claim_dict)
+
+        # 1.5 Claim Decontextualization
+        decontextualized = decontextualize_claims(claim_text, [claim_dict])[0]
+
+        # 2. Live Web Evidence Retrieval (uses decontextualized search_text)
+        retrieved_claims = get_evidence_for_claims([decontextualized], max_results=6, top_k=3)
+        evidence = retrieved_claims[0].get("evidence", [])
+        print(f"     Retrieved {len(evidence)} evidence snippet(s)")
+
+        # 3. NLI + Composite Risk Scoring
+        scored = score_claim(decontextualized)
 
         record = {
             "claim": claim_text,
+            "search_text": scored.get("search_text", claim_text),
+            "decontext_status": scored.get("decontext_status", "unchanged"),
             "fever_label": fever_label,
             "p_claim": scored["p_claim"],
             "p_ai_generated": scored["p_ai_generated"],

@@ -51,6 +51,10 @@ class AnalyzeRequest(BaseModel):
         le=1.0,
         description="Threshold probability for check-worthiness.",
     )
+    use_decontext: bool = Field(
+        default=True,
+        description="Whether to run claim decontextualization before evidence retrieval.",
+    )
 
 
 @app.get("/", summary="Serve test interface")
@@ -86,6 +90,7 @@ def analyze_endpoint(payload: AnalyzeRequest) -> Dict[str, Any]:
         result = analyze_article(
             article_text=cleaned_text,
             claim_threshold=payload.claim_threshold,
+            use_decontext=payload.use_decontext,
         )
         return result
     except ValueError as val_err:

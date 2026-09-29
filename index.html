@@ -113,6 +113,12 @@
       border-left: 3px solid #ccc;
       margin-top: 8px;
     }
+    .decontext-note {
+      font-size: 13px;
+      color: #777;
+      font-style: italic;
+      margin-bottom: 6px;
+    }
     .badge {
       display: inline-block;
       padding: 2px 8px;
@@ -139,6 +145,9 @@
       <label style="font-size: 14px; color: #444;">
         Claim threshold:
         <input type="number" id="claim_threshold" value="0.65" step="0.05" min="0" max="1" style="width: 60px;">
+      </label>
+      <label style="font-size: 14px; color: #444; cursor: pointer;">
+        <input type="checkbox" id="decontextToggle" checked> Enable decontextualization
       </label>
     </div>
   </form>
@@ -190,6 +199,7 @@
     const form = document.getElementById("analyze-form");
     const textInput = document.getElementById("article_text");
     const thresholdInput = document.getElementById("claim_threshold");
+    const decontextToggle = document.getElementById("decontextToggle");
     const submitBtn = document.getElementById("submit-btn");
     const loadingDiv = document.getElementById("loading");
     const errorDiv = document.getElementById("error");
@@ -221,7 +231,8 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             article_text: text,
-            claim_threshold: parseFloat(thresholdInput.value) || 0.65
+            claim_threshold: parseFloat(thresholdInput.value) || 0.65,
+            use_decontext: decontextToggle.checked
           })
         });
 
@@ -273,12 +284,19 @@
           const verdict = claim.verdict || "insufficient_evidence";
           const badgeClass = `badge badge-${verdict}`;
 
+          // Show decontextualized version when the claim was rewritten
+          let decontextLine = "";
+          if (claim.decontext_status === "rewritten" && claim.search_text) {
+            decontextLine = `<div class="decontext-note">Interpreted as: &ldquo;${escapeHtml(claim.search_text)}&rdquo;</div>`;
+          }
+
           card.innerHTML = `
             <div class="claim-header">
               <span><strong>Claim #${idx + 1}</strong></span>
               <span class="${badgeClass}">${verdict.toUpperCase()}</span>
             </div>
             <div class="claim-text">"${escapeHtml(claim.text)}"</div>
+            ${decontextLine}
             <div class="claim-meta">
               <strong>Risk Score:</strong> ${claim.risk_score} (<span class="tier-${claim.risk_tier}">${claim.risk_tier}</span>) &bull;
               <strong>P(Claim):</strong> ${(claim.p_claim * 100).toFixed(1)}% &bull;

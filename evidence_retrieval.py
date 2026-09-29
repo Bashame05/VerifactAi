@@ -346,16 +346,22 @@ def get_evidence_for_claims(
     total = len(claims_list)
     for i, claim in enumerate(claims_list, 1):
         claim_text = claim.get("text", "")
+        # Use decontextualized text for search & ranking when available;
+        # fall back to the original sentence for backward compatibility.
+        search_text = claim.get("search_text", claim_text)
         print(
             f"\n  🔍 [{i}/{total}] Searching evidence for:\n"
             f"     \"{claim_text[:90]}{'…' if len(claim_text) > 90 else ''}\""
         )
+        if search_text != claim_text:
+            print(f"     (searching as: \"{search_text[:90]}{'…' if len(search_text) > 90 else ''}\")") 
 
-        evidence = get_evidence_for_claim(
-            claim_text,
-            max_results=max_results,
-            top_k=top_k,
-        )
+        # Search using the (potentially decontextualized) text.
+        snippets = search_claim(search_text, max_results=max_results)
+        if snippets:
+            evidence = rank_by_relevance(search_text, snippets, top_k=top_k)
+        else:
+            evidence = []
         claim["evidence"] = evidence
 
         print(f"     → {len(evidence)} relevant snippet(s) retained")

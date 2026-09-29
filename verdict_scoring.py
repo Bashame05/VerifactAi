@@ -441,7 +441,10 @@ def score_claim(claim_dict: Dict) -> Dict:
         The same dict, augmented in-place.
     """
 
-    claim_text = claim_dict.get("text", "")
+    # Use the decontextualized sentence for NLI when available,
+    # so the LLM judges the same standalone claim the evidence
+    # was retrieved for.  Falls back to the original text.
+    claim_text = claim_dict.get("search_text", claim_dict.get("text", ""))
     evidence = claim_dict.get("evidence", [])
 
     # ── 1. Get NLI verdict from Groq (or fallback) ──

@@ -40,10 +40,18 @@ Design notes
 from __future__ import annotations
 
 import json
+import sys
 import time
 from typing import Any, Dict, List, Optional
 
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 from claim_pipeline import extract_and_score_claims
+from decontext import decontextualize_claims
 from evidence_retrieval import get_evidence_for_claims
 from verdict_scoring import assign_risk_tier, score_claims
 from article_metrics import compute_article_metrics
@@ -52,6 +60,7 @@ from article_metrics import compute_article_metrics
 def analyze_article(
     article_text: str,
     claim_threshold: float = 0.65,
+    use_decontext: bool = True,
 ) -> Dict[str, Any]:
     """Execute the full end-to-end verification pipeline on an article.
 
@@ -63,6 +72,8 @@ def analyze_article(
         Probability threshold for check-worthiness (default 0.65).
         Only sentences with P(claim) >= threshold are forwarded to the
         search and verification stages.
+    use_decontext : bool, optional
+        Whether to run claim decontextualization (default True).
 
     Returns
     -------
@@ -133,6 +144,24 @@ def analyze_article(
         }
 
     # ─────────────────────────────────────────────────────────────
+    # DECONTEXTUALIZATION: Rewrite claims as standalone sentences
+    # ─────────────────────────────────────────────────────────────
+    # Resolves pronouns / vague references ("She said…", "The company
+    # denied it…") using entities from the article, so downstream
+    # Tavily search and NLI evaluation see self-contained queries.
+    # Behind a feature flag (USE_DECONTEXT); when off, adds zero latency.
+    sd_start = time.perf_counter()
+    if use_decontext:
+        print(f"\n[Decontext] Decontextualizing {len(claims)} claim(s)...")
+        claims = decontextualize_claims(article_text, claims, use_decontext=True)
+        sd_duration = time.perf_counter() - sd_start
+        print(f"✓ Decontextualization completed in {sd_duration:.2f}s.")
+    else:
+        print("\n[Decontext] Decontextualization disabled (use_decontext=False). Skipping API calls.")
+        claims = decontextualize_claims(article_text, claims, use_decontext=False)
+        sd_duration = time.perf_counter() - sd_start
+
+    # ─────────────────────────────────────────────────────────────
     # STAGE 2: Web search (Tavily) & semantic ranking (MiniLM)
     # ─────────────────────────────────────────────────────────────
     # Why time this stage:
@@ -173,6 +202,7 @@ def analyze_article(
     print(f"\n{'=' * 75}")
     print("🏁 PIPELINE EXECUTION SUMMARY")
     print(f"  • Stage 1 (Extract & Classify) : {s1_duration:.2f}s ({s1_duration/total_time*100:.1f}%)")
+    print(f"  • Decontextualization          : {sd_duration:.2f}s ({sd_duration/total_time*100:.1f}%)")
     print(f"  • Stage 2 (Evidence Retrieval) : {s2_duration:.2f}s ({s2_duration/total_time*100:.1f}%)")
     print(f"  • Stage 3 (Verdict & Scoring)  : {s3_duration:.2f}s ({s3_duration/total_time*100:.1f}%)")
     print(f"  • Total Pipeline Latency       : {total_time:.2f}s")

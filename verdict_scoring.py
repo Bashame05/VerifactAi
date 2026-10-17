@@ -36,9 +36,16 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import time
 import warnings
 from typing import Any, Dict, List, Optional
+
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 from dotenv import load_dotenv
 
@@ -47,7 +54,11 @@ from dotenv import load_dotenv
 # ──────────────────────────────────────────────
 load_dotenv()
 
-from groq import Groq
+try:
+    from groq import Groq, RateLimitError
+except ImportError:
+    from groq import Groq  # type: ignore[assignment]
+    RateLimitError = type("RateLimitError", (Exception,), {})  # fallback dummy class
 
 # ──────────────────────────────────────────────
 # Groq client setup
@@ -202,17 +213,106 @@ _SYSTEM_PROMPT = (
 )
 
 
+# ──────────────────────────────────────────────
+# Rate-limit detection & backoff helpers
+# ──────────────────────────────────────────────
+# Detection path status for installed groq package (v1.7.0):
+# • Primary path: groq.RateLimitError is exposed by the installed SDK
+#   and is caught specifically.
+# • Fallback path: status_code attributes (429) or error message substrings
+#   ('429', 'rate_limit', 'rate limit') are used if an exception does not
+#   inherit from groq.RateLimitError.
+# ──────────────────────────────────────────────
+def _is_rate_limit_error(exc: Exception) -> bool:
+    """Detect whether an exception represents an HTTP 429 rate limit.
+
+    Detection paths:
+    1. Primary (SDK exception class): Checks if exc is an instance of
+       groq.RateLimitError (active path for installed groq==1.7.0).
+    2. Fallback (status_code / response.status_code): Checks if exc
+       or its attached response has status_code == 429.
+    3. Fallback (string inspection): Checks if str(exc) contains '429',
+       'rate_limit', or 'rate limit' (case-insensitive).
+    """
+    # Primary detection path: SDK exception class (groq.RateLimitError)
+    if isinstance(exc, RateLimitError):
+        return True
+
+    # Fallback detection path: status_code attributes
+    if getattr(exc, "status_code", None) == 429:
+        return True
+    resp = getattr(exc, "response", None)
+    if resp is not None and getattr(resp, "status_code", None) == 429:
+        return True
+
+    # Fallback detection path: message string inspection
+    exc_str = str(exc).lower()
+    if "429" in exc_str or "rate_limit" in exc_str or "rate limit" in exc_str:
+        return True
+
+    return False
+
+
+def _get_rate_limit_delay(exc: Exception, attempt: int) -> float:
+    """Determine the wait time in seconds for a rate-limit error.
+
+    Checks if the exception or its response headers expose a 'retry-after'
+    value (in seconds). If present, returns that value + 1.0s buffer.
+    Otherwise, applies exponential backoff starting at 15s and doubling
+    each retry (15s, 30s, 60s), capped at 60s.
+    """
+    retry_after = None
+
+    # Check for direct attribute on exception if present
+    raw_val = getattr(exc, "retry_after", None)
+
+    # Check response headers (httpx.Response.headers in groq SDK)
+    if raw_val is None:
+        headers = None
+        resp = getattr(exc, "response", None)
+        if resp is not None and hasattr(resp, "headers"):
+            headers = resp.headers
+        elif hasattr(exc, "headers"):
+            headers = getattr(exc, "headers")
+
+        if headers and hasattr(headers, "get"):
+            raw_val = headers.get("retry-after") or headers.get("Retry-After")
+
+    if raw_val is not None:
+        try:
+            val = float(raw_val)
+            if val >= 0:
+                retry_after = val
+        except (ValueError, TypeError):
+            pass
+
+    if retry_after is not None:
+        return retry_after + 1.0
+
+    # Exponential backoff: attempt 1 -> 15s, attempt 2 -> 30s, attempt 3+ -> 60s
+    return min(60.0, 15.0 * (2 ** (attempt - 1)))
+
+
+def _handle_rate_limit_backoff(exc: Exception, attempt: int, module_name: str) -> None:
+    """Execute rate-limit-aware backoff and log diagnostic message."""
+    if attempt <= MAX_RETRIES:
+        wait_time = _get_rate_limit_delay(exc, attempt)
+        wait_display = int(wait_time) if wait_time == int(wait_time) else round(wait_time, 1)
+        print(f"  ⚠ [{module_name}] Rate limit hit. Waiting {wait_display}s before retry {attempt}...")
+        time.sleep(wait_time)
+    else:
+        print(f"  ⚠ [{module_name}] Rate limit hit. All retries exhausted. Giving up.")
+
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Groq API call with retry logic
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Retry logic is intentionally simple (fixed delay,
-# limited to 2 retries) because:
-#   • Groq rarely produces malformed JSON when
-#     response_format is set correctly.
-#   • Exponential backoff is overkill for 2 retries.
-#   • If the model is persistently failing, we want
-#     to fall back quickly rather than block the
-#     pipeline.
+# Retry logic:
+#   • Rate limits (HTTP 429): rate-limit-aware backoff
+#     (retry-after or 15s/30s/60s exponential backoff).
+#   • Malformed JSON / structure: fixed 0.5s delay.
+#   • Non-rate-limit errors: fixed 1.0s delay.
+#   • Total retries capped at MAX_RETRIES (2 retries).
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 def _call_groq_nli(claim_text: str, evidence: List[Dict]) -> Optional[Dict]:
     """Send the claim + evidence to Groq and parse the JSON response.
@@ -295,8 +395,17 @@ def _call_groq_nli(claim_text: str, evidence: List[Dict]) -> Optional[Dict]:
             )
             time.sleep(0.5)
 
+        except RateLimitError as exc:
+            # Primary detection path: caught dedicated groq.RateLimitError
+            _handle_rate_limit_backoff(exc, attempt, "verdict_scoring")
+
         except Exception as exc:
-            # Catches network errors, rate limits, auth failures, etc.
+            # Fallback detection path: check if generic exception is a rate limit
+            if _is_rate_limit_error(exc):
+                _handle_rate_limit_backoff(exc, attempt, "verdict_scoring")
+                continue
+
+            # Catches network errors, non-rate-limit API errors, auth failures, etc.
             print(
                 f"  ⚠ [attempt {attempt}] Groq API error: "
                 f"{type(exc).__name__}: {exc}. "

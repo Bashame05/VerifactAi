@@ -57,6 +57,63 @@ from verdict_scoring import assign_risk_tier, score_claims
 from article_metrics import compute_article_metrics
 
 
+def aggregate_article_risk(claims: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Compute overall article risk score and tier from individual claim results.
+
+    Combines individual claim risk scores into an article-level score and tier:
+      1. Base score is the flat arithmetic mean of all claim risk scores.
+      2. Base tier is computed from the mean score using assign_risk_tier.
+      3. Floor rule override:
+         - If >= 2 claims have risk_tier == 'High', final tier is floored at 'High'.
+         - Else if >= 1 claim has risk_tier == 'High', final tier is floored at 'Medium'.
+         - Numeric overall_risk_score is strictly unchanged (remains the mean).
+      4. If the floor rule alters the tier, tier_floor_applied is True and an
+         explanatory reason is provided in tier_override_reason.
+    """
+    if not claims:
+        return {
+            "overall_risk_score": 0.0,
+            "overall_risk_tier": assign_risk_tier(0.0),
+            "tier_floor_applied": False,
+            "tier_override_reason": None,
+        }
+
+    risk_scores = [c.get("risk_score", 0.0) for c in claims]
+    overall_risk_score = round(sum(risk_scores) / len(risk_scores), 2)
+    base_tier = assign_risk_tier(overall_risk_score)
+
+    high_risk_count = sum(
+        1 for c in claims
+        if c.get("risk_tier") == "High" or (c.get("risk_tier") is None and assign_risk_tier(c.get("risk_score", 0.0)) == "High")
+    )
+
+    tier_order = {"Low": 0, "Medium": 1, "High": 2}
+    current_tier_rank = tier_order.get(base_tier, 0)
+
+    target_tier = base_tier
+    if high_risk_count >= 2:
+        if current_tier_rank < tier_order["High"]:
+            target_tier = "High"
+    elif high_risk_count == 1:
+        if current_tier_rank < tier_order["Medium"]:
+            target_tier = "Medium"
+
+    tier_floor_applied = target_tier != base_tier
+    tier_override_reason = None
+    if tier_floor_applied:
+        claim_str = "claim" if high_risk_count == 1 else "claims"
+        tier_override_reason = (
+            f"Tier floored to {target_tier} due to {high_risk_count} high-risk {claim_str}"
+        )
+
+    return {
+        "overall_risk_score": overall_risk_score,
+        "overall_risk_tier": target_tier,
+        "tier_floor_applied": tier_floor_applied,
+        "tier_override_reason": tier_override_reason,
+    }
+
+
 def analyze_article(
     article_text: str,
     claim_threshold: float = 0.65,
@@ -79,12 +136,14 @@ def analyze_article(
     -------
     dict
         Structured evaluation containing:
-        - ``article_length``    : character count of input text
-        - ``num_claims_found``  : number of check-worthy claims identified
-        - ``claims``            : list of fully scored claim dictionaries
-        - ``overall_risk_score``: mean risk score across all extracted claims
-        - ``overall_risk_tier`` : 'Low', 'Medium', or 'High'
-        - ``highest_risk_claim``: dict of the single most risky claim (or None)
+        - ``article_length``        : character count of input text
+        - ``num_claims_found``      : number of check-worthy claims identified
+        - ``claims``                : list of fully scored claim dictionaries
+        - ``overall_risk_score``    : mean risk score across all extracted claims
+        - ``overall_risk_tier``     : 'Low', 'Medium', or 'High' (floored if high-risk claims exist)
+        - ``tier_floor_applied``    : boolean flag indicating if floor override altered the tier
+        - ``tier_override_reason``  : explanation of the floor override (or None)
+        - ``highest_risk_claim``    : dict of the single most risky claim (or None)
 
     Raises
     ------
@@ -139,6 +198,8 @@ def analyze_article(
             "claims": [],
             "overall_risk_score": 0.0,
             "overall_risk_tier": assign_risk_tier(0.0),
+            "tier_floor_applied": False,
+            "tier_override_reason": None,
             "highest_risk_claim": None,
             "article_metrics": article_metrics,
         }
@@ -189,10 +250,12 @@ def analyze_article(
     # ─────────────────────────────────────────────────────────────
     # METRICS AGGREGATION
     # ─────────────────────────────────────────────────────────────
-    # Compute the average risk across all claims for overall assessment.
-    risk_scores = [c.get("risk_score", 0.0) for c in claims]
-    overall_risk_score = round(sum(risk_scores) / len(risk_scores), 2)
-    overall_risk_tier = assign_risk_tier(overall_risk_score)
+    # Compute average risk and apply high-risk floor rules to prevent dilution.
+    aggregation = aggregate_article_risk(claims)
+    overall_risk_score = aggregation["overall_risk_score"]
+    overall_risk_tier = aggregation["overall_risk_tier"]
+    tier_floor_applied = aggregation["tier_floor_applied"]
+    tier_override_reason = aggregation["tier_override_reason"]
 
     # Identify the highest-risk claim to power alert banners / summary widgets.
     highest_risk_claim = max(claims, key=lambda c: c.get("risk_score", 0.0))
@@ -206,7 +269,10 @@ def analyze_article(
     print(f"  • Stage 2 (Evidence Retrieval) : {s2_duration:.2f}s ({s2_duration/total_time*100:.1f}%)")
     print(f"  • Stage 3 (Verdict & Scoring)  : {s3_duration:.2f}s ({s3_duration/total_time*100:.1f}%)")
     print(f"  • Total Pipeline Latency       : {total_time:.2f}s")
-    print(f"  • Overall Article Risk Score   : {overall_risk_score}/100 [{overall_risk_tier}]")
+    if tier_floor_applied:
+        print(f"  • Overall Article Risk Score   : {overall_risk_score}/100 [{overall_risk_tier}] (Floor override: {tier_override_reason})")
+    else:
+        print(f"  • Overall Article Risk Score   : {overall_risk_score}/100 [{overall_risk_tier}]")
     print(f"{'=' * 75}\n")
 
     return {
@@ -215,6 +281,8 @@ def analyze_article(
         "claims": claims,
         "overall_risk_score": overall_risk_score,
         "overall_risk_tier": overall_risk_tier,
+        "tier_floor_applied": tier_floor_applied,
+        "tier_override_reason": tier_override_reason,
         "highest_risk_claim": highest_risk_claim,
         "article_metrics": article_metrics,
     }

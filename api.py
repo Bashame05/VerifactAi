@@ -76,6 +76,8 @@ def analyze_endpoint(payload: AnalyzeRequest) -> Dict[str, Any]:
       - claims (list with p_claim, p_ai, verdict, contradiction, risk, evidence)
       - overall_risk_score
       - overall_risk_tier
+      - tier_floor_applied
+      - tier_override_reason
       - highest_risk_claim
       - article_metrics (readability + coherence)
     """
